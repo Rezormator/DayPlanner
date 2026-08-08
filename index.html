@@ -272,7 +272,7 @@
 </div>
 
 <!-- Event modal -->
-<dialog id="eventDialog">
+<dialog id="eventDialog" tabindex="-1">
   <form class="sheet" method="dialog" id="eventForm">
     <div class="sheetTitle" id="eventDialogTitle">New event</div>
     <div class="field">
@@ -689,7 +689,8 @@
     openDialog(eventDialog);
     if(ev){
       // avoid auto-focusing the title field (and popping the keyboard) when editing
-      requestAnimationFrame(()=>{ document.activeElement && document.activeElement.blur(); });
+      document.getElementById('evTitle').blur();
+      eventDialog.focus({ preventScroll: true });
     }
   }
   document.getElementById('evCancel').addEventListener('click', ()=>eventDialog.close());
