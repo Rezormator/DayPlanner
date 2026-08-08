@@ -144,12 +144,12 @@
   .weekActions{
     position:fixed;
     left:calc(50% - 195px + 16px);
-    right:calc(50% - 195px + 90px);
+    right:calc(50% - 195px + 64px);
     bottom:calc(22px + env(safe-area-inset-bottom));
     display:flex; gap:8px; z-index:15;
   }
   @media (max-width:560px){
-    .weekActions{ left:16px; right:88px; }
+    .weekActions{ left:16px; right:64px; }
   }
   .btnGhost{
     flex:1; border:1px solid var(--line-strong); background:var(--bg-2); color:var(--ink);
@@ -274,7 +274,12 @@
 
   <div id="view"></div>
 
-  <button id="fab">+</button>
+  <button id="fab" title="New event">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+  </button>
 </div>
 
 <!-- Event modal -->
