@@ -83,8 +83,8 @@
   #notesBar{ padding:10px 16px; border-bottom:1px solid var(--line); background:var(--bg-2); }
   #notesBar textarea{
     width:100%; border:none; background:transparent; resize:none;
-    font-family:'IBM Plex Sans', sans-serif; font-size:14px; color:var(--ink);
-    outline:none; min-height:20px; max-height:70px;
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; line-height:18px; color:var(--ink);
+    outline:none; min-height:20px; max-height:56px; overflow-y:auto;
   }
   #notesBar textarea::placeholder{ color:var(--ink-faint); }
 
@@ -121,7 +121,7 @@
   }
 
   /* ---------- week view ---------- */
-  #weekWrap{ padding:10px 12px 90px; }
+  #weekWrap{ padding:10px 12px 100px; }
   #weekCols{ display:flex; gap:6px; }
   .wcol{ flex:1; display:flex; flex-direction:column; align-items:center; cursor:pointer; }
   .wcol .wname{ font-size:10px; color:var(--ink-soft); }
@@ -140,7 +140,16 @@
     border-radius:8px; border:1px solid var(--line); overflow:hidden;
   }
   .wblock{ position:absolute; left:2px; right:2px; border-radius:3px; }
-  .weekActions{ margin-top:18px; display:flex; gap:8px; }
+  .weekActions{
+    position:fixed;
+    left:calc(50% - 195px + 16px);
+    right:calc(50% - 195px + 90px);
+    bottom:calc(22px + env(safe-area-inset-bottom));
+    display:flex; gap:8px; z-index:15;
+  }
+  @media (max-width:560px){
+    .weekActions{ left:16px; right:88px; }
+  }
   .btnGhost{
     flex:1; border:1px solid var(--line-strong); background:var(--bg-2); color:var(--ink);
     padding:11px; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer;
@@ -154,7 +163,7 @@
   }
 
   /* ---------- month view ---------- */
-  #monthWrap{ padding:14px 14px 40px; }
+  #monthWrap{ padding:14px 14px 100px; }
   .mheadRow{ display:flex; margin-bottom:6px; }
   .mheadRow div{ flex:1; text-align:center; font-size:10px; color:var(--ink-faint); }
   .mrow{ display:flex; gap:4px; margin-bottom:4px; }
@@ -503,9 +512,14 @@
 
   /* ================= notes bar (day) ================= */
   const dayNoteInput = document.getElementById('dayNoteInput');
+  function autosizeNote(){
+    dayNoteInput.style.height = 'auto';
+    dayNoteInput.style.height = dayNoteInput.scrollHeight + 'px';
+  }
   dayNoteInput.addEventListener('input', ()=>{
     DB.notes[dateKey(currentDate)] = dayNoteInput.value;
     saveDB();
+    autosizeNote();
   });
 
   /* ================= render dispatcher ================= */
@@ -518,7 +532,7 @@
     if(currentView==='week') renderWeekLabel();
     if(currentView==='month') renderMonthLabel();
 
-    if(currentView==='day'){ dayNoteInput.value = DB.notes[dateKey(currentDate)] || ''; renderDay(); }
+    if(currentView==='day'){ dayNoteInput.value = DB.notes[dateKey(currentDate)] || ''; autosizeNote(); renderDay(); }
     else if(currentView==='week'){ renderWeek(); }
     else{ renderMonth(); }
   }
