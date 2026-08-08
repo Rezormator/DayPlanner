@@ -687,6 +687,10 @@
     evColorRow.querySelectorAll('.colorSwatch').forEach(c=>c.classList.toggle('sel', c.dataset.color===col));
     document.getElementById('evDelete').style.display = ev ? 'inline-block' : 'none';
     openDialog(eventDialog);
+    if(ev){
+      // avoid auto-focusing the title field (and popping the keyboard) when editing
+      requestAnimationFrame(()=>{ document.activeElement && document.activeElement.blur(); });
+    }
   }
   document.getElementById('evCancel').addEventListener('click', ()=>eventDialog.close());
   document.getElementById('evSave').addEventListener('click', ()=>{
