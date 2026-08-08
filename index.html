@@ -635,7 +635,7 @@
     view.querySelectorAll('.wcol').forEach((col,i)=>{
       col.addEventListener('click', ()=>{ currentDate = days[i]; setView('day'); });
     });
-    document.getElementById('weekBulkBtn').addEventListener('click', openBulkModal);
+    document.getElementById('weekBulkBtn').addEventListener('click', ()=>openBulkModal('week'));
   }
 
   /* ================= MONTH VIEW ================= */
@@ -668,7 +668,11 @@
       html += `</div>`;
       if(cursor.getMonth()!==m && w>=4) break;
     }
-    html += `</div>`;
+    html += `
+      <div class="weekActions">
+        <button class="btnGhost primary" id="monthBulkBtn">Add to multiple days</button>
+      </div>
+    </div>`;
     view.innerHTML = html;
 
     view.querySelectorAll('.mcell').forEach(cell=>{
@@ -678,6 +682,7 @@
         setView('day');
       });
     });
+    document.getElementById('monthBulkBtn').addEventListener('click', ()=>openBulkModal('month'));
   }
 
   /* ================= EVENT MODAL ================= */
@@ -760,7 +765,9 @@
     });
     bkColorRow.appendChild(sw);
   });
-  function openBulkModal(){
+  let bulkMode = 'week';
+  function openBulkModal(mode){
+    bulkMode = mode || 'week';
     document.getElementById('bkTitle').value='';
     document.getElementById('bkNote').value='';
     bkDowRow.querySelectorAll('.dowChip').forEach(c=>c.classList.remove('sel'));
@@ -779,12 +786,26 @@
     const colEl = bkColorRow.querySelector('.colorSwatch.sel');
     const color = colEl ? colEl.dataset.color : PALETTE[0];
     const note = document.getElementById('bkNote').value.trim();
-    const s = startOfWeek(currentDate);
-    chosen.forEach(idx=>{
-      const d = addDays(s, idx);
-      DB.events.push({ id: uid(), title, date: dateKey(d), start, end, color, desc:'' });
-      if(note) DB.notes[dateKey(d)] = note;
-    });
+
+    if(bulkMode === 'month'){
+      const y = currentDate.getFullYear(), m = currentDate.getMonth();
+      const daysInMonth = new Date(y, m+1, 0).getDate();
+      for(let day=1; day<=daysInMonth; day++){
+        const d = new Date(y, m, day);
+        const idx = (d.getDay()+6)%7; // Monday=0 ... Sunday=6, matches DOW order
+        if(chosen.includes(idx)){
+          DB.events.push({ id: uid(), title, date: dateKey(d), start, end, color, desc:'' });
+          if(note) DB.notes[dateKey(d)] = note;
+        }
+      }
+    }else{
+      const s = startOfWeek(currentDate);
+      chosen.forEach(idx=>{
+        const d = addDays(s, idx);
+        DB.events.push({ id: uid(), title, date: dateKey(d), start, end, color, desc:'' });
+        if(note) DB.notes[dateKey(d)] = note;
+      });
+    }
     saveDB();
     bulkDialog.close();
     render();
