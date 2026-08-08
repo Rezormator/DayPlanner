@@ -435,6 +435,31 @@
   }
 
 
+  /* ================= dialog scroll lock ================= */
+  // iOS Safari scrolls the whole page up when a dialog input is focused,
+  // which drags the topbar along with it. Locking body scroll prevents this.
+  let savedScrollY = 0;
+  function openDialog(dialog){
+    savedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${savedScrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    dialog.showModal();
+  }
+  function unlockScroll(){
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, savedScrollY);
+  }
+  ['eventDialog','bulkDialog','settingsDialog'].forEach(id=>{
+    document.getElementById(id).addEventListener('close', unlockScroll);
+  });
+
   /* ================= shell wiring ================= */
   document.querySelectorAll('.tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{ setView(tab.dataset.view); });
@@ -446,7 +471,7 @@
     else{ openEventModal(null, currentDate); }
   });
   document.getElementById('gearBtn').addEventListener('click', ()=>{
-    document.getElementById('settingsDialog').showModal();
+    openDialog(document.getElementById('settingsDialog'));
   });
 
   function nav(dir){
@@ -553,6 +578,7 @@
   /* ================= WEEK VIEW ================= */
   function renderWeek(){
     const view = document.getElementById('view');
+    view.scrollTop = 0;
     const s = startOfWeek(currentDate);
     const days = Array.from({length:7}, (_,i)=>addDays(s,i));
 
@@ -596,6 +622,7 @@
   /* ================= MONTH VIEW ================= */
   function renderMonth(){
     const view = document.getElementById('view');
+    view.scrollTop = 0;
     const y = currentDate.getFullYear(), m = currentDate.getMonth();
     const first = new Date(y,m,1);
     const gridStart = startOfWeek(first);
@@ -659,7 +686,7 @@
     const col = ev ? (ev.color||PALETTE[0]) : PALETTE[0];
     evColorRow.querySelectorAll('.colorSwatch').forEach(c=>c.classList.toggle('sel', c.dataset.color===col));
     document.getElementById('evDelete').style.display = ev ? 'inline-block' : 'none';
-    eventDialog.showModal();
+    openDialog(eventDialog);
   }
   document.getElementById('evCancel').addEventListener('click', ()=>eventDialog.close());
   document.getElementById('evSave').addEventListener('click', ()=>{
@@ -716,7 +743,7 @@
     bkColorRow.querySelectorAll('.colorSwatch').forEach((c,i)=>c.classList.toggle('sel', i===0));
     document.getElementById('bkStart').value = '09:00';
     document.getElementById('bkEnd').value = '18:00';
-    bulkDialog.showModal();
+    openDialog(bulkDialog);
   }
   document.getElementById('bkCancel').addEventListener('click', ()=>bulkDialog.close());
   document.getElementById('bkSave').addEventListener('click', ()=>{
