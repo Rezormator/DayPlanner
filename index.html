@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0D0E10;
+    --bg-2:#17181B;
+    --bg-3:#1F2124;
+    --ink:#EEEFF1;
+    --ink-soft:#8B8D93;
+    --ink-faint:#54565B;
+    --line:#26282C;
+    --line-strong:#34363B;
+    --blue:#6FA3FF;
+    --blue-soft:rgba(111,163,255,.14);
+    --danger:#C97768;
+    --danger-soft:rgba(201,119,104,.14);
+    --glass-grad:linear-gradient(135deg, rgba(255,255,255,.14), rgba(111,163,255,.28));
+    --glass-border:rgba(255,255,255,.16);
+    --radius:12px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', -apple-system, sans-serif;
+    display:flex;
+    justify-content:center;
+    -webkit-user-select:none; user-select:none;
+    overscroll-behavior-y:none;
+  }
+  #shell{
+    width:100%;
+    max-width:390px;
+    min-height:100vh;
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    position:relative;
+  }
+
+  /* ---------- top bar ---------- */
+  #topbar{
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--line);
+    background:var(--bg);
+  }
+  #topbar .row1{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .navbtn{
+    background:none; border:none; color:var(--ink);
+    font-size:20px; padding:4px 10px; cursor:pointer; line-height:1;
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  .label-wrap{ text-align:center; flex:1; }
+  #dateLabel{ font-weight:600; font-size:18px; }
+  #subLabel{ font-size:11.5px; color:var(--ink-soft); margin-top:1px; }
+  #gearBtn{ background:none;border:none;padding:4px 8px;cursor:pointer;color:var(--ink-soft); display:flex; align-items:center; justify-content:center;}
+  .tabs{ display:flex; gap:6px; }
+  .tab{
+    flex:1; text-align:center; padding:7px 0; border-radius:8px;
+    font-size:13px; font-weight:600; cursor:pointer;
+    color:var(--ink-soft); background:var(--bg-2); border:1px solid var(--line);
+  }
+  .tab.active{
+    background:var(--glass-grad);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--glass-border);
+    color:var(--ink);
+  }
+
+  /* ---------- notes bar ---------- */
+  #notesBar{ padding:10px 16px; border-bottom:1px solid var(--line); background:var(--bg-2); }
+  #notesBar textarea{
+    width:100%; border:none; background:transparent; resize:none;
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; color:var(--ink);
+    outline:none; min-height:20px; max-height:70px;
+  }
+  #notesBar textarea::placeholder{ color:var(--ink-faint); }
+
+  /* ---------- view container ---------- */
+  #view{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; position:relative; }
+
+  /* ---------- day grid ---------- */
+  #dayGrid{ position:relative; }
+  .hourRow{
+    position:relative; height:60px; border-bottom:1px solid var(--line);
+    display:flex;
+  }
+  .hourRow .hlabel{
+    width:46px; flex:none; font-size:10.5px;
+    color:var(--ink-faint); padding:3px 8px 0 0; text-align:right;
+  }
+  .hourRow .hbody{ flex:1; position:relative; border-left:1px solid var(--line); }
+  .hourRow .hbody::after{
+    content:''; position:absolute; left:0; right:0; top:50%;
+    border-top:1px dashed var(--line); opacity:.6;
+  }
+  #eventsLayer{ position:absolute; top:0; left:46px; right:0; bottom:0; pointer-events:none; }
+  .evBlock{
+    position:absolute; left:6px; right:6px; border-radius:8px;
+    padding:5px 8px; overflow:hidden; pointer-events:auto; cursor:pointer;
+    color:var(--ink); border-left:3px solid transparent;
+  }
+  .evBlock .t{ font-size:12.5px; font-weight:600; line-height:1.25; }
+  .evBlock .tm{ font-size:10px; opacity:.75; }
+  #nowLine{ position:absolute; left:46px; right:0; height:0; border-top:2px solid var(--blue); z-index:5; }
+  #nowLine::before{
+    content:''; position:absolute; left:-4px; top:-4px; width:8px;height:8px;border-radius:50%;
+    background:var(--blue);
+  }
+
+  /* ---------- week view ---------- */
+  #weekWrap{ padding:10px 12px 90px; }
+  #weekCols{ display:flex; gap:6px; }
+  .wcol{ flex:1; display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+  .wcol .wname{ font-size:10px; color:var(--ink-soft); }
+  .wcol .wnum{
+    font-weight:600; font-size:16px; margin:2px 0 6px;
+    width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:50%;
+  }
+  .wcol.today .wnum{
+    background:var(--glass-grad);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--glass-border);
+    color:var(--ink);
+  }
+  .wcol .wtrack{
+    position:relative; width:100%; height:220px; background:var(--bg-2);
+    border-radius:8px; border:1px solid var(--line); overflow:hidden;
+  }
+  .wblock{ position:absolute; left:2px; right:2px; border-radius:3px; }
+  .weekActions{ margin-top:18px; display:flex; gap:8px; }
+  .btnGhost{
+    flex:1; border:1px solid var(--line-strong); background:var(--bg-2); color:var(--ink);
+    padding:11px; border-radius:10px; font-size:13.5px; font-weight:600; cursor:pointer;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .btnGhost.primary{
+    background:var(--glass-grad);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--glass-border);
+    color:var(--ink);
+  }
+
+  /* ---------- month view ---------- */
+  #monthWrap{ padding:14px 14px 40px; }
+  .mheadRow{ display:flex; margin-bottom:6px; }
+  .mheadRow div{ flex:1; text-align:center; font-size:10px; color:var(--ink-faint); }
+  .mrow{ display:flex; gap:4px; margin-bottom:4px; }
+  .mcell{
+    flex:1; aspect-ratio:1; border-radius:8px; border:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    cursor:pointer; background:var(--bg-2); position:relative;
+  }
+  .mcell.dim{ opacity:.35; }
+  .mcell.today{ border-color:var(--blue); border-width:2px; }
+  .mcell .mn{ font-weight:600; font-size:15px; }
+  .mcell .dots{ display:flex; gap:2px; margin-top:3px; position:absolute; bottom:6px; }
+  .mcell .dots span{ width:4px; height:4px; border-radius:50%; }
+
+  /* ---------- fab ---------- */
+  #fab{
+    position:fixed; bottom:calc(22px + env(safe-area-inset-bottom)); right:calc(50% - 195px + 20px);
+    width:52px; height:52px; border-radius:50%; color:var(--ink);
+    background:var(--glass-grad);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--glass-border);
+    font-size:26px; box-shadow:0 4px 18px rgba(0,0,0,.5); cursor:pointer; z-index:20;
+  }
+  @media (max-width:560px){ #fab{ right:20px; } }
+
+  /* ---------- dialogs ---------- */
+  dialog{
+    border:none; border-radius:16px 16px 0 0; padding:0; width:100%; max-width:390px;
+    margin:auto auto 0; background:var(--bg-2); color:var(--ink);
+  }
+  dialog::backdrop{ background:rgba(0,0,0,.6); }
+  .sheet{ padding:18px 18px calc(18px + env(safe-area-inset-bottom)); }
+  .sheetTitle{ font-weight:600; font-size:18px; margin-bottom:14px; }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .field input[type=text], .field input[type=time], .field input[type=date], .field textarea{
+    width:100%; border:1px solid var(--line-strong); border-radius:8px; padding:10px 11px;
+    font-family:'IBM Plex Sans',sans-serif; font-size:15px; background:var(--bg); color:var(--ink);
+  }
+  .field input[type=time]{
+    text-align:left; -webkit-appearance:none; appearance:none;
+    height:40px; width:100%; box-sizing:border-box; max-width:100%;
+  }
+  .field input::placeholder, .field textarea::placeholder{ color:var(--ink-faint); }
+  .field textarea{ resize:vertical; min-height:44px; font-family:'IBM Plex Sans',sans-serif; }
+  .row2{ display:flex; gap:10px; }
+  .row2 .field{ flex:1; }
+  .timeCol{ display:flex; flex-direction:row; gap:10px; }
+  .timeCol .field{ flex:1; min-width:0; }
+
+  .colorRow{ display:flex; gap:9px; flex-wrap:wrap; }
+  .colorSwatch{
+    width:30px; height:30px; border-radius:50%; cursor:pointer; opacity:.5;
+    border:2px solid transparent;
+  }
+  .colorSwatch.sel{ opacity:1; border-color:var(--ink); }
+  .dowRow{ display:flex; gap:5px; }
+  .dowChip{
+    flex:1; text-align:center; padding:9px 0; border-radius:8px; background:var(--bg);
+    border:1px solid var(--line); font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-soft);
+  }
+  .dowChip.sel{
+    background:var(--glass-grad);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--glass-border);
+    color:var(--ink);
+  }
+  .sheetBtns{ display:flex; gap:10px; margin-top:16px; }
+  .btnMain{
+    flex:1; color:var(--ink); border:none; padding:13px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer;
+    background:var(--glass-grad);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--glass-border);
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .btnCancel{ background:var(--bg-3); color:var(--ink); border:none; padding:13px 16px; border-radius:10px; font-size:15px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
+  .btnDelete{ background:var(--danger-soft); color:var(--danger); border:none; padding:13px 16px; border-radius:10px; font-size:15px; cursor:pointer; font-weight:600; font-family:'IBM Plex Sans',sans-serif; }
+  .settingsRow{ display:flex; flex-direction:column; gap:10px; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <div id="topbar">
+    <div class="row1">
+      <button class="navbtn" id="prevBtn">‹</button>
+      <div class="label-wrap">
+        <div id="dateLabel">—</div>
+        <div id="subLabel">—</div>
+      </div>
+      <button class="navbtn" id="nextBtn">›</button>
+      <button id="gearBtn" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="2" y1="4.5" x2="16" y2="4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="2" y1="13.5" x2="16" y2="13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="tabs">
+      <div class="tab" data-view="day">Day</div>
+      <div class="tab" data-view="week">Week</div>
+      <div class="tab" data-view="month">Month</div>
+    </div>
+  </div>
+
+  <div id="notesBar">
+    <textarea id="dayNoteInput" rows="1" placeholder="Day notes"></textarea>
+  </div>
+
+  <div id="view"></div>
+
+  <button id="fab">+</button>
+</div>
+
+<!-- Event modal -->
+<dialog id="eventDialog">
+  <form class="sheet" method="dialog" id="eventForm">
+    <div class="sheetTitle" id="eventDialogTitle">New event</div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="evTitle" placeholder="Add a title">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Date</label>
+        <input type="text" id="evDate" placeholder="DD/MM/YYYY" inputmode="numeric" maxlength="10">
+      </div>
+    </div>
+    <div class="timeCol">
+      <div class="field">
+        <label>Start</label>
+        <input type="time" id="evStart" lang="en-GB">
+      </div>
+      <div class="field">
+        <label>End</label>
+        <input type="time" id="evEnd" lang="en-GB">
+      </div>
+    </div>
+    <div class="field">
+      <label>Color</label>
+      <div class="colorRow" id="evColorRow"></div>
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="evDesc" placeholder="Add a description"></textarea>
+    </div>
+    <div class="sheetBtns">
+      <button type="button" class="btnCancel" id="evCancel">Cancel</button>
+      <button type="button" class="btnDelete" id="evDelete" style="display:none;">Delete</button>
+      <button type="button" class="btnMain" id="evSave">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Bulk (week) add modal -->
+<dialog id="bulkDialog">
+  <form class="sheet" method="dialog">
+    <div class="sheetTitle">Add to multiple days</div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="bkTitle" placeholder="e.g. Work">
+    </div>
+    <div class="field">
+      <label>Days</label>
+      <div class="dowRow" id="bkDowRow"></div>
+    </div>
+    <div class="timeCol">
+      <div class="field">
+        <label>Start</label>
+        <input type="time" id="bkStart" lang="en-GB">
+      </div>
+      <div class="field">
+        <label>End</label>
+        <input type="time" id="bkEnd" lang="en-GB">
+      </div>
+    </div>
+    <div class="field">
+      <label>Color</label>
+      <div class="colorRow" id="bkColorRow"></div>
+    </div>
+    <div class="field">
+      <label>Day note (optional)</label>
+      <textarea id="bkNote" placeholder="Add a note for these days"></textarea>
+    </div>
+    <div class="sheetBtns">
+      <button type="button" class="btnCancel" id="bkCancel">Cancel</button>
+      <button type="button" class="btnMain" id="bkSave">Add</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Settings modal -->
+<dialog id="settingsDialog">
+  <form class="sheet" method="dialog">
+    <div class="sheetTitle">Settings</div>
+    <div class="settingsRow">
+      <button type="button" class="btnGhost" id="exportBtn">Export data</button>
+      <button type="button" class="btnGhost" id="importBtn">Import data</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <button type="button" class="btnGhost" id="clearBtn" style="color:var(--danger);">Clear all data</button>
+    </div>
+    <div class="sheetBtns">
+      <button type="button" class="btnMain" id="settingsClose">Done</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= constants ================= */
+  const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const DOW_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const PALETTE = ['#6FA3FF','#8B93A6','#9E8BD9','#5FB0A8','#C97768','#D9AE5F','#6BC5C9','#B78BC9'];
+  const STORAGE_KEY = 'planner:v1';
+  const HOUR_H = 60; // px per hour
+
+  /* ================= state ================= */
+  let DB = loadDB();
+  let currentView = 'day';
+  let currentDate = new Date(); currentDate.setHours(0,0,0,0);
+  let editingEventId = null;
+
+  /* ================= storage ================= */
+  function loadDB(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        const d = JSON.parse(raw);
+        return { events: d.events||[], notes: d.notes||{} };
+      }
+    }catch(e){}
+    return { events: [], notes: {} };
+  }
+  function saveDB(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+  }
+
+  /* ================= date utils ================= */
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function dateKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function sameDay(a,b){ return dateKey(a)===dateKey(b); }
+  function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+  function startOfWeek(d){ const day=(d.getDay()+6)%7; return addDays(d,-day); }
+  function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+  function todayKey(){ return dateKey(new Date()); }
+  function hexToRgba(hex, a){
+    const h = hex.replace('#','');
+    const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  // dd/mm/yyyy <-> internal yyyy-mm-dd
+  function keyToDMY(key){
+    const [y,m,d] = key.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  function dmyToKey(str){
+    const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(!m) return null;
+    const d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+    if(mo<1||mo>12||d<1||d>31) return null;
+    const test = new Date(y, mo-1, d);
+    if(test.getFullYear()!==y || test.getMonth()!==mo-1 || test.getDate()!==d) return null;
+    return `${y}-${pad(mo)}-${pad(d)}`;
+  }
+  function wireDateAutoSlash(input){
+    input.addEventListener('input', ()=>{
+      let digits = input.value.replace(/\D/g,'').slice(0,8);
+      let out = digits;
+      if(digits.length>=5) out = `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
+      else if(digits.length>=3) out = `${digits.slice(0,2)}/${digits.slice(2)}`;
+      input.value = out;
+    });
+  }
+
+
+  /* ================= shell wiring ================= */
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{ setView(tab.dataset.view); });
+  });
+  document.getElementById('prevBtn').addEventListener('click', ()=>nav(-1));
+  document.getElementById('nextBtn').addEventListener('click', ()=>nav(1));
+  document.getElementById('fab').addEventListener('click', ()=>{
+    if(currentView==='week'){ openBulkModal(); }
+    else{ openEventModal(null, currentDate); }
+  });
+  document.getElementById('gearBtn').addEventListener('click', ()=>{
+    document.getElementById('settingsDialog').showModal();
+  });
+
+  function nav(dir){
+    if(currentView==='day') currentDate = addDays(currentDate, dir);
+    else if(currentView==='week') currentDate = addDays(currentDate, dir*7);
+    else { const d=new Date(currentDate); d.setMonth(d.getMonth()+dir); currentDate=d; }
+    render();
+  }
+  function setView(v){ currentView=v; render(); }
+
+  /* ================= notes bar (day) ================= */
+  const dayNoteInput = document.getElementById('dayNoteInput');
+  dayNoteInput.addEventListener('input', ()=>{
+    DB.notes[dateKey(currentDate)] = dayNoteInput.value;
+    saveDB();
+  });
+
+  /* ================= render dispatcher ================= */
+  function render(){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.view===currentView));
+    const notesBar = document.getElementById('notesBar');
+    notesBar.style.display = currentView==='day' ? 'block' : 'none';
+
+    if(currentView==='day') renderDayLabel();
+    if(currentView==='week') renderWeekLabel();
+    if(currentView==='month') renderMonthLabel();
+
+    if(currentView==='day'){ dayNoteInput.value = DB.notes[dateKey(currentDate)] || ''; renderDay(); }
+    else if(currentView==='week'){ renderWeek(); }
+    else{ renderMonth(); }
+  }
+
+  function renderDayLabel(){
+    document.getElementById('dateLabel').textContent = `${DOW_FULL[(currentDate.getDay()+6)%7]}`;
+    document.getElementById('subLabel').textContent = `${currentDate.getDate()} ${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  }
+  function renderWeekLabel(){
+    const s = startOfWeek(currentDate), e = addDays(s,6);
+    document.getElementById('dateLabel').textContent = `${s.getDate()} ${MONTHS[s.getMonth()].slice(0,3)} – ${e.getDate()} ${MONTHS[e.getMonth()].slice(0,3)}`;
+    document.getElementById('subLabel').textContent = `${e.getFullYear()}`;
+  }
+  function renderMonthLabel(){
+    document.getElementById('dateLabel').textContent = MONTHS[currentDate.getMonth()];
+    document.getElementById('subLabel').textContent = `${currentDate.getFullYear()}`;
+  }
+
+  /* ================= DAY VIEW ================= */
+  function renderDay(){
+    const view = document.getElementById('view');
+    let html = `<div id="dayGrid">`;
+    for(let h=0; h<24; h++){
+      html += `<div class="hourRow"><div class="hlabel">${pad(h)}:00</div><div class="hbody"></div></div>`;
+    }
+    html += `<div id="eventsLayer"></div><div id="nowLine" style="display:none;"></div></div>`;
+    view.innerHTML = html;
+
+    const layer = document.getElementById('eventsLayer');
+    const dk = dateKey(currentDate);
+    const dayEvents = DB.events.filter(e=>e.date===dk).sort((a,b)=>timeToMin(a.start)-timeToMin(b.start));
+
+    dayEvents.forEach(ev=>{
+      const top = (timeToMin(ev.start)/60)*HOUR_H;
+      const height = Math.max(((timeToMin(ev.end)-timeToMin(ev.start))/60)*HOUR_H, 20);
+      const color = ev.color || PALETTE[0];
+      const block = document.createElement('div');
+      block.className='evBlock';
+      block.style.top = top+'px';
+      block.style.height = height+'px';
+      block.style.background = hexToRgba(color, .30);
+      block.style.borderLeftColor = color;
+      block.innerHTML = `<div class="t">${escapeHtml(ev.title)}</div><div class="tm">${ev.start}–${ev.end}</div>`;
+      block.addEventListener('click', (e)=>{ e.stopPropagation(); openEventModal(ev); });
+      layer.appendChild(block);
+    });
+
+    if(sameDay(currentDate, new Date())){
+      const now = new Date();
+      const nowLine = document.getElementById('nowLine');
+      nowLine.style.display='block';
+      nowLine.style.top = ((now.getHours()*60+now.getMinutes())/60*HOUR_H)+'px';
+    }
+
+    const dayGridEl = document.getElementById('dayGrid');
+    let dgStartX=0, dgStartY=0;
+    dayGridEl.addEventListener('pointerdown', (e)=>{ dgStartX=e.clientX; dgStartY=e.clientY; });
+    dayGridEl.addEventListener('click', (e)=>{
+      if(Math.abs(e.clientX-dgStartX)>8 || Math.abs(e.clientY-dgStartY)>8) return; // was a scroll/drag, not a tap
+      const grid = document.getElementById('dayGrid');
+      const rect = grid.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      let mins = Math.round((y/HOUR_H*60)/30)*30;
+      mins = Math.max(0, Math.min(1410, mins));
+      const startH = Math.floor(mins/60), startM = mins%60;
+      const endMins = Math.min(mins+60,1440);
+      const startStr = `${pad(startH)}:${pad(startM)}`;
+      const endStr = `${pad(Math.floor(endMins/60))}:${pad(endMins%60)}`;
+      openEventModal(null, currentDate, startStr, endStr);
+    });
+
+    // open at 7:00 by default
+    view.scrollTop = 7*HOUR_H;
+  }
+
+  /* ================= WEEK VIEW ================= */
+  function renderWeek(){
+    const view = document.getElementById('view');
+    const s = startOfWeek(currentDate);
+    const days = Array.from({length:7}, (_,i)=>addDays(s,i));
+
+    let html = `<div id="weekWrap"><div id="weekCols">`;
+    days.forEach((d,i)=>{
+      const isToday = sameDay(d, new Date());
+      html += `<div class="wcol ${isToday?'today':''}" data-idx="${i}">
+        <div class="wname">${DOW[i]}</div>
+        <div class="wnum">${d.getDate()}</div>
+        <div class="wtrack" data-idx="${i}"></div>
+      </div>`;
+    });
+    html += `</div>
+      <div class="weekActions">
+        <button class="btnGhost primary" id="weekBulkBtn">Add to multiple days</button>
+      </div>
+    </div>`;
+    view.innerHTML = html;
+
+    days.forEach((d,i)=>{
+      const track = view.querySelector(`.wtrack[data-idx="${i}"]`);
+      const dk = dateKey(d);
+      DB.events.filter(e=>e.date===dk).forEach(ev=>{
+        const top = (timeToMin(ev.start)/1440)*100;
+        const h = Math.max(((timeToMin(ev.end)-timeToMin(ev.start))/1440)*100, 2.5);
+        const color = ev.color || PALETTE[0];
+        const b = document.createElement('div');
+        b.className='wblock';
+        b.style.top = top+'%'; b.style.height = h+'%';
+        b.style.background = hexToRgba(color, .55);
+        track.appendChild(b);
+      });
+    });
+
+    view.querySelectorAll('.wcol').forEach((col,i)=>{
+      col.addEventListener('click', ()=>{ currentDate = days[i]; setView('day'); });
+    });
+    document.getElementById('weekBulkBtn').addEventListener('click', openBulkModal);
+  }
+
+  /* ================= MONTH VIEW ================= */
+  function renderMonth(){
+    const view = document.getElementById('view');
+    const y = currentDate.getFullYear(), m = currentDate.getMonth();
+    const first = new Date(y,m,1);
+    const gridStart = startOfWeek(first);
+
+    let html = `<div id="monthWrap"><div class="mheadRow">`;
+    DOW.forEach(d=>html+=`<div>${d[0]}</div>`);
+    html += `</div>`;
+
+    let cursor = new Date(gridStart);
+    for(let w=0; w<6; w++){
+      html += `<div class="mrow">`;
+      for(let d=0; d<7; d++){
+        const dk = dateKey(cursor);
+        const inMonth = cursor.getMonth()===m;
+        const isToday = dk===todayKey();
+        const dayEvents = DB.events.filter(e=>e.date===dk);
+        const colors = [...new Set(dayEvents.map(e=>e.color||PALETTE[0]))].slice(0,3);
+        html += `<div class="mcell ${inMonth?'':'dim'} ${isToday?'today':''}" data-key="${dk}">
+          <div class="mn">${cursor.getDate()}</div>
+          <div class="dots">${colors.map(c=>`<span style="background:${c}"></span>`).join('')}</div>
+        </div>`;
+        cursor = addDays(cursor,1);
+      }
+      html += `</div>`;
+      if(cursor.getMonth()!==m && w>=4) break;
+    }
+    html += `</div>`;
+    view.innerHTML = html;
+
+    view.querySelectorAll('.mcell').forEach(cell=>{
+      cell.addEventListener('click', ()=>{
+        const [yy,mm,dd] = cell.dataset.key.split('-').map(Number);
+        currentDate = new Date(yy, mm-1, dd);
+        setView('day');
+      });
+    });
+  }
+
+  /* ================= EVENT MODAL ================= */
+  const eventDialog = document.getElementById('eventDialog');
+  const evColorRow = document.getElementById('evColorRow');
+  wireDateAutoSlash(document.getElementById('evDate'));
+  PALETTE.forEach(c=>{
+    const sw = document.createElement('div');
+    sw.className='colorSwatch'; sw.dataset.color=c; sw.style.background=c;
+    sw.addEventListener('click', ()=>{
+      evColorRow.querySelectorAll('.colorSwatch').forEach(s=>s.classList.remove('sel'));
+      sw.classList.add('sel');
+    });
+    evColorRow.appendChild(sw);
+  });
+
+  function openEventModal(ev, dateForNew, startForNew, endForNew){
+    editingEventId = ev ? ev.id : null;
+    document.getElementById('eventDialogTitle').textContent = ev ? 'Edit event' : 'New event';
+    document.getElementById('evTitle').value = ev ? ev.title : '';
+    document.getElementById('evDate').value = keyToDMY(ev ? ev.date : dateKey(dateForNew||currentDate));
+    document.getElementById('evStart').value = ev ? ev.start : (startForNew||'09:00');
+    document.getElementById('evEnd').value = ev ? ev.end : (endForNew||'10:00');
+    document.getElementById('evDesc').value = ev ? (ev.desc||'') : '';
+    const col = ev ? (ev.color||PALETTE[0]) : PALETTE[0];
+    evColorRow.querySelectorAll('.colorSwatch').forEach(c=>c.classList.toggle('sel', c.dataset.color===col));
+    document.getElementById('evDelete').style.display = ev ? 'inline-block' : 'none';
+    eventDialog.showModal();
+  }
+  document.getElementById('evCancel').addEventListener('click', ()=>eventDialog.close());
+  document.getElementById('evSave').addEventListener('click', ()=>{
+    const title = document.getElementById('evTitle').value.trim();
+    if(!title){ document.getElementById('evTitle').focus(); return; }
+    const date = dmyToKey(document.getElementById('evDate').value);
+    if(!date){ document.getElementById('evDate').focus(); return; }
+    const start = document.getElementById('evStart').value;
+    const end = document.getElementById('evEnd').value;
+    const colEl = evColorRow.querySelector('.colorSwatch.sel');
+    const color = colEl ? colEl.dataset.color : PALETTE[0];
+    const desc = document.getElementById('evDesc').value.trim();
+
+    if(editingEventId){
+      const ev = DB.events.find(e=>e.id===editingEventId);
+      Object.assign(ev, {title,date,start,end,color,desc});
+    }else{
+      DB.events.push({ id: uid(), title, date, start, end, color, desc });
+    }
+    saveDB();
+    eventDialog.close();
+    render();
+  });
+  document.getElementById('evDelete').addEventListener('click', ()=>{
+    DB.events = DB.events.filter(e=>e.id!==editingEventId);
+    saveDB();
+    eventDialog.close();
+    render();
+  });
+
+  /* ================= BULK (week) MODAL ================= */
+  const bulkDialog = document.getElementById('bulkDialog');
+  const bkDowRow = document.getElementById('bkDowRow');
+  DOW.forEach((d,i)=>{
+    const chip = document.createElement('div');
+    chip.className='dowChip'; chip.dataset.idx=i; chip.textContent=d;
+    chip.addEventListener('click', ()=>chip.classList.toggle('sel'));
+    bkDowRow.appendChild(chip);
+  });
+  const bkColorRow = document.getElementById('bkColorRow');
+  PALETTE.forEach(c=>{
+    const sw = document.createElement('div');
+    sw.className='colorSwatch'; sw.dataset.color=c; sw.style.background=c;
+    sw.addEventListener('click', ()=>{
+      bkColorRow.querySelectorAll('.colorSwatch').forEach(s=>s.classList.remove('sel'));
+      sw.classList.add('sel');
+    });
+    bkColorRow.appendChild(sw);
+  });
+  function openBulkModal(){
+    document.getElementById('bkTitle').value='';
+    document.getElementById('bkNote').value='';
+    bkDowRow.querySelectorAll('.dowChip').forEach(c=>c.classList.remove('sel'));
+    bkColorRow.querySelectorAll('.colorSwatch').forEach((c,i)=>c.classList.toggle('sel', i===0));
+    document.getElementById('bkStart').value = '09:00';
+    document.getElementById('bkEnd').value = '18:00';
+    bulkDialog.showModal();
+  }
+  document.getElementById('bkCancel').addEventListener('click', ()=>bulkDialog.close());
+  document.getElementById('bkSave').addEventListener('click', ()=>{
+    const title = document.getElementById('bkTitle').value.trim();
+    const chosen = [...bkDowRow.querySelectorAll('.dowChip.sel')].map(c=>Number(c.dataset.idx));
+    if(!title || chosen.length===0) return;
+    const start = document.getElementById('bkStart').value;
+    const end = document.getElementById('bkEnd').value;
+    const colEl = bkColorRow.querySelector('.colorSwatch.sel');
+    const color = colEl ? colEl.dataset.color : PALETTE[0];
+    const note = document.getElementById('bkNote').value.trim();
+    const s = startOfWeek(currentDate);
+    chosen.forEach(idx=>{
+      const d = addDays(s, idx);
+      DB.events.push({ id: uid(), title, date: dateKey(d), start, end, color, desc:'' });
+      if(note) DB.notes[dateKey(d)] = note;
+    });
+    saveDB();
+    bulkDialog.close();
+    render();
+  });
+
+  /* ================= SETTINGS ================= */
+  document.getElementById('settingsClose').addEventListener('click', ()=>document.getElementById('settingsDialog').close());
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(DB, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `planner-backup-${dateKey(new Date())}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        if(data && Array.isArray(data.events)){
+          DB = { events: data.events||[], notes: data.notes||{} };
+          saveDB();
+          render();
+          alert('Data imported.');
+        }else{ alert('Invalid file format.'); }
+      }catch(err){ alert('Could not read file.'); }
+    };
+    reader.readAsText(file);
+    e.target.value='';
+  });
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    if(confirm("Delete all events and notes? This can't be undone.")){
+      DB = { events: [], notes: {} };
+      saveDB();
+      render();
+    }
+  });
+
+  /* ================= helpers ================= */
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+  function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+  /* ================= init ================= */
+  render();
+})();
+</script>
+</body>
+</html>
