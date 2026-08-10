@@ -198,7 +198,7 @@
     max-height:min(78dvh, calc(100dvh - 118px - env(safe-area-inset-top)));
   }
   dialog::backdrop{ background:rgba(0,0,0,.6); }
-  #eventDialog{
+  #eventDialog[open]{
     display:flex; flex-direction:column;
     height:calc(100vh - var(--topbar-h));
     height:calc(100dvh - var(--topbar-h));
@@ -238,23 +238,7 @@
     border:2px solid transparent;
   }
   .colorSwatch.sel{ opacity:1; border-color:var(--ink); }
-  .colorSwatch.customSwatch{
-    position:relative; opacity:1;
-    background:conic-gradient(from 0deg, #FF5F6D, #FFC371, #6FCF97, #6FA3FF, #9E8BD9, #FF5F6D);
-    border:2px solid transparent;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .colorSwatch.customSwatch .plusIcon{
-    width:14px; height:14px; border-radius:50%; background:var(--bg-2);
-    display:flex; align-items:center; justify-content:center;
-    font-size:12px; line-height:1; color:var(--ink); font-weight:600; pointer-events:none;
-  }
-  .colorSwatch.customSwatch.hasColor{ background:var(--custom-color, var(--line-strong)); }
-  .colorSwatch.customSwatch.hasColor .plusIcon{ display:none; }
-  .colorSwatch.customSwatch.sel{ border-color:var(--ink); }
-  .colorSwatch input[type=color]{
-    position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:none; padding:0;
-  }
+  
   .dowRow{ display:flex; gap:5px; }
   .dowChip{
     flex:1; text-align:center; padding:9px 0; border-radius:8px; background:var(--bg);
@@ -338,7 +322,7 @@
       </div>
     </div>
     <div class="field">
-      <label>Color</label>
+      <label>Color (Click again to change)</label>
       <div class="colorRow" id="evColorRow"></div>
     </div>
     <div class="field">
@@ -376,7 +360,7 @@
       </div>
     </div>
     <div class="field">
-      <label>Color</label>
+      <label>Color (Click again to change)</label>
       <div class="colorRow" id="bkColorRow"></div>
     </div>
     <div class="field">
@@ -427,7 +411,7 @@
   const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const DOW_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const PALETTE = ['#6FA3FF','#8B93A6','#9E8BD9','#5FB0A8','#C97768','#D9AE5F','#6BC5C9','#B78BC9'];
+  const DEFAULT_PALETTE = ['#6FA3FF','#8B93A6','#9E8BD9','#5FB0A8','#C97768','#D9AE5F','#6BC5C9','#B78BC9'];
   const STORAGE_KEY = 'planner:v1';
   const HOUR_H = 60; // px per hour
 
@@ -443,10 +427,11 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if(raw){
         const d = JSON.parse(raw);
-        return { events: d.events||[], notes: d.notes||{} };
+        // Ensure palette exists or populate with defaults
+        return { events: d.events||[], notes: d.notes||{}, palette: d.palette||[...DEFAULT_PALETTE] };
       }
     }catch(e){}
-    return { events: [], notes: {} };
+    return { events: [], notes: {}, palette: [...DEFAULT_PALETTE] };
   }
   function saveDB(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
@@ -489,10 +474,7 @@
     });
   }
 
-
   /* ================= dialog scroll lock ================= */
-  // iOS Safari scrolls the whole page up when a dialog input is focused,
-  // which drags the topbar along with it. Locking body scroll prevents this.
   let savedScrollY = 0;
   function openDialog(dialog){
     savedScrollY = window.scrollY || window.pageYOffset || 0;
@@ -620,7 +602,7 @@
     dayEvents.forEach(ev=>{
       const top = (timeToMin(ev.start)/60)*HOUR_H;
       const height = Math.max(((timeToMin(ev.end)-timeToMin(ev.start))/60)*HOUR_H, 20);
-      const color = ev.color || PALETTE[0];
+      const color = ev.color || DB.palette[0];
       const block = document.createElement('div');
       block.className='evBlock';
       block.style.top = top+'px';
@@ -643,7 +625,7 @@
     let dgStartX=0, dgStartY=0;
     dayGridEl.addEventListener('pointerdown', (e)=>{ dgStartX=e.clientX; dgStartY=e.clientY; });
     dayGridEl.addEventListener('click', (e)=>{
-      if(Math.abs(e.clientX-dgStartX)>8 || Math.abs(e.clientY-dgStartY)>8) return; // was a scroll/drag, not a tap
+      if(Math.abs(e.clientX-dgStartX)>8 || Math.abs(e.clientY-dgStartY)>8) return; 
       const grid = document.getElementById('dayGrid');
       const rect = grid.getBoundingClientRect();
       const y = e.clientY - rect.top;
@@ -656,7 +638,6 @@
       openEventModal(null, currentDate, startStr, endStr);
     });
 
-    // open at 7:00 by default
     view.scrollTop = 7*HOUR_H;
   }
 
@@ -686,7 +667,7 @@
       DB.events.filter(e=>e.date===dk).forEach(ev=>{
         const top = (timeToMin(ev.start)/1440)*100;
         const h = Math.max(((timeToMin(ev.end)-timeToMin(ev.start))/1440)*100, 2.5);
-        const color = ev.color || PALETTE[0];
+        const color = ev.color || DB.palette[0];
         const b = document.createElement('div');
         b.className='wblock';
         b.style.top = top+'%'; b.style.height = h+'%';
@@ -720,7 +701,7 @@
         const inMonth = cursor.getMonth()===m;
         const isToday = dk===todayKey();
         const dayEvents = DB.events.filter(e=>e.date===dk);
-        const colors = [...new Set(dayEvents.map(e=>e.color||PALETTE[0]))].slice(0,3);
+        const colors = [...new Set(dayEvents.map(e=>e.color||DB.palette[0]))].slice(0,3);
         html += `<div class="mcell ${inMonth?'':'dim'} ${isToday?'today':''}" data-key="${dk}">
           <div class="mn">${cursor.getDate()}</div>
           <div class="dots">${colors.map(c=>`<span style="background:${c}"></span>`).join('')}</div>
@@ -750,62 +731,77 @@
     return match ? match.color : null;
   }
 
-  /* ================= color row helper ================= */
-  function buildColorRow(rowEl, onChange){
-    PALETTE.forEach(c=>{
-      const sw = document.createElement('div');
-      sw.className='colorSwatch'; sw.dataset.color=c; sw.style.background=c;
-      sw.addEventListener('click', ()=>{
-        rowEl.querySelectorAll('.colorSwatch').forEach(s=>s.classList.remove('sel'));
-        sw.classList.add('sel');
-        if(onChange) onChange(c);
-      });
-      rowEl.appendChild(sw);
-    });
-    const custom = document.createElement('div');
-    custom.className='colorSwatch customSwatch';
-    custom.innerHTML = '<span class="plusIcon">+</span>';
-    const input = document.createElement('input');
-    input.type='color'; input.value='#6FA3FF';
-    custom.appendChild(input);
-    input.addEventListener('input', ()=>{
-      const c = input.value;
-      custom.dataset.color = c;
-      custom.style.setProperty('--custom-color', c);
-      custom.classList.add('hasColor');
-      rowEl.querySelectorAll('.colorSwatch').forEach(s=>s.classList.remove('sel'));
-      custom.classList.add('sel');
-      if(onChange) onChange(c);
-    });
-    rowEl.appendChild(custom);
-    rowEl._customSwatch = custom;
-    return custom;
-  }
-  function setColorRowSelection(rowEl, color){
-    const custom = rowEl._customSwatch;
-    const swatches = rowEl.querySelectorAll('.colorSwatch:not(.customSwatch)');
-    let matched = false;
-    swatches.forEach(s=>{
-      const isSel = s.dataset.color===color;
-      s.classList.toggle('sel', isSel);
-      if(isSel) matched=true;
-    });
-    if(!matched && color){
-      custom.dataset.color = color;
-      custom.style.setProperty('--custom-color', color);
-      custom.classList.add('hasColor','sel');
-      const input = custom.querySelector('input[type=color]');
-      if(input) input.value = color;
-    } else {
-      custom.classList.remove('sel');
+  /* ================= custom color picker row ================= */
+  function buildColorPicker(paletteRowEl){
+    let selectedColor = null;
+
+    function select(color){
+      selectedColor = color;
+      renderPalette();
     }
+
+    function renderPalette(){
+      paletteRowEl.innerHTML = '';
+      
+      DB.palette.forEach((c, i)=>{
+        const sw = document.createElement('div');
+        sw.className = 'colorSwatch';
+        
+        const isSelected = selectedColor && selectedColor.toLowerCase() === c.toLowerCase();
+        if (isSelected) sw.classList.add('sel');
+        
+        sw.style.background = c;
+        sw.style.position = 'relative';
+
+        // Invisible input that natively handles the color picking
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = c;
+        input.style.position = 'absolute';
+        input.style.inset = '0';
+        input.style.width = '100%';
+        input.style.height = '100%';
+        input.style.opacity = '0';
+        input.style.cursor = 'pointer';
+        
+        // If it's already selected, clicking it will trigger the input (open color picker)
+        // If not selected, the CSS blocks the input click so the JS below handles the simple selection
+        input.style.pointerEvents = isSelected ? 'auto' : 'none';
+
+        sw.appendChild(input);
+
+        // Click to just select the swatch
+        sw.addEventListener('click', (e)=>{
+          if(!isSelected) {
+            e.preventDefault();
+            select(c);
+          }
+        });
+
+        // When the user actually changes a color via picker
+        input.addEventListener('change', (e)=>{
+          const newColor = e.target.value;
+          DB.palette[i] = newColor; // Save new user choice in place of old color
+          saveDB();
+          select(newColor);
+        });
+
+        paletteRowEl.appendChild(sw);
+      });
+    }
+
+    return {
+      select,
+      renderPalette,
+      getSelected(){ return selectedColor; }
+    };
   }
 
   /* ================= EVENT MODAL ================= */
   const eventDialog = document.getElementById('eventDialog');
   const evColorRow = document.getElementById('evColorRow');
   wireDateAutoSlash(document.getElementById('evDate'));
-  buildColorRow(evColorRow);
+  const evColorPicker = buildColorPicker(evColorRow);
 
   function openEventModal(ev, dateForNew, startForNew, endForNew){
     updateTopbarHeight();
@@ -816,20 +812,23 @@
     document.getElementById('evStart').value = ev ? ev.start : (startForNew||'09:00');
     document.getElementById('evEnd').value = ev ? ev.end : (endForNew||'10:00');
     document.getElementById('evDesc').value = ev ? (ev.desc||'') : '';
-    const col = ev ? (ev.color||PALETTE[0]) : PALETTE[0];
-    setColorRowSelection(evColorRow, col);
+    
+    evColorPicker.renderPalette();
+    const col = ev ? (ev.color||DB.palette[0]) : DB.palette[0];
+    evColorPicker.select(col);
+    
     document.getElementById('evDelete').style.display = ev ? 'inline-block' : 'none';
     openDialog(eventDialog);
     if(ev){
-      // avoid auto-focusing the title field (and popping the keyboard) when editing
       document.getElementById('evTitle').blur();
       eventDialog.focus({ preventScroll: true });
     }
   }
+  
   document.getElementById('evTitle').addEventListener('input', ()=>{
     const color = findColorForTitle(document.getElementById('evTitle').value, editingEventId);
     if(color){
-      setColorRowSelection(evColorRow, color);
+      evColorPicker.select(color);
     }
   });
   document.getElementById('evCancel').addEventListener('click', ()=>eventDialog.close());
@@ -840,8 +839,7 @@
     if(!date){ document.getElementById('evDate').focus(); return; }
     const start = document.getElementById('evStart').value;
     const end = document.getElementById('evEnd').value;
-    const colEl = evColorRow.querySelector('.colorSwatch.sel');
-    const color = colEl ? colEl.dataset.color : PALETTE[0];
+    const color = evColorPicker.getSelected() || DB.palette[0];
     const desc = document.getElementById('evDesc').value.trim();
 
     if(editingEventId){
@@ -871,22 +869,28 @@
     bkDowRow.appendChild(chip);
   });
   const bkColorRow = document.getElementById('bkColorRow');
-  buildColorRow(bkColorRow);
+  const bkColorPicker = buildColorPicker(bkColorRow);
+  
   let bulkMode = 'week';
+  
   function openBulkModal(mode){
     bulkMode = mode || 'week';
     document.getElementById('bkTitle').value='';
     document.getElementById('bkNote').value='';
     bkDowRow.querySelectorAll('.dowChip').forEach(c=>c.classList.remove('sel'));
-    setColorRowSelection(bkColorRow, PALETTE[0]);
+    
+    bkColorPicker.renderPalette();
+    bkColorPicker.select(DB.palette[0]);
+    
     document.getElementById('bkStart').value = '09:00';
     document.getElementById('bkEnd').value = '18:00';
     openDialog(bulkDialog);
   }
+  
   document.getElementById('bkTitle').addEventListener('input', ()=>{
     const color = findColorForTitle(document.getElementById('bkTitle').value);
     if(color){
-      setColorRowSelection(bkColorRow, color);
+      bkColorPicker.select(color);
     }
   });
   document.getElementById('bkCancel').addEventListener('click', ()=>bulkDialog.close());
@@ -896,8 +900,7 @@
     if(!title || chosen.length===0) return;
     const start = document.getElementById('bkStart').value;
     const end = document.getElementById('bkEnd').value;
-    const colEl = bkColorRow.querySelector('.colorSwatch.sel');
-    const color = colEl ? colEl.dataset.color : PALETTE[0];
+    const color = bkColorPicker.getSelected() || DB.palette[0];
     const note = document.getElementById('bkNote').value.trim();
 
     if(bulkMode === 'month'){
@@ -943,7 +946,7 @@
       try{
         const data = JSON.parse(reader.result);
         if(data && Array.isArray(data.events)){
-          DB = { events: data.events||[], notes: data.notes||{} };
+          DB = { events: data.events||[], notes: data.notes||{}, palette: data.palette||[...DEFAULT_PALETTE] };
           saveDB();
           render();
           alert('Data imported.');
@@ -955,7 +958,7 @@
   });
   document.getElementById('clearBtn').addEventListener('click', ()=>{
     if(confirm("Delete all events and notes? This can't be undone.")){
-      DB = { events: [], notes: {} };
+      DB = { events: [], notes: {}, palette: [...DEFAULT_PALETTE] };
       saveDB();
       render();
     }
