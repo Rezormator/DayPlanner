@@ -198,6 +198,13 @@
     max-height:min(78dvh, calc(100dvh - 118px - env(safe-area-inset-top)));
   }
   dialog::backdrop{ background:rgba(0,0,0,.6); }
+  
+  /* Fix for missing height on normal dialogs (like Settings) */
+  dialog:not(#eventDialog)[open] {
+    display: block;
+    height: auto; 
+  }
+  
   #eventDialog[open]{
     display:flex; flex-direction:column;
     height:calc(100vh - var(--topbar-h));
@@ -213,6 +220,7 @@
   #eventDialog .sheet > .field:last-of-type{ flex:1; display:flex; flex-direction:column; min-height:0; }
   #eventDialog #evDesc{ flex:1; resize:none; min-height:120px; }
   #eventDialog .sheetBtns{ flex:none; }
+  
   .sheet{ padding:18px 18px calc(18px + env(safe-area-inset-bottom)); max-height:100%; overflow-y:auto; box-sizing:border-box; }
   .sheetTitle{ font-weight:600; font-size:18px; margin-bottom:14px; }
   .field{ margin-bottom:12px; }
@@ -232,7 +240,8 @@
   .timeCol{ display:flex; flex-direction:row; gap:10px; }
   .timeCol .field{ flex:1; min-width:0; }
 
-  .colorRow{ display:flex; gap:9px; flex-wrap:wrap; }
+  /* 9 Colors, auto-spaced cleanly across the width */
+  .colorRow{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
   .colorSwatch{
     width:30px; height:30px; border-radius:50%; cursor:pointer; opacity:.5;
     border:2px solid transparent;
@@ -261,7 +270,7 @@
   }
   .btnCancel{ background:var(--bg-3); color:var(--ink); border:none; padding:13px 16px; border-radius:10px; font-size:15px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
   .btnDelete{ background:var(--danger-soft); color:var(--danger); border:none; padding:13px 16px; border-radius:10px; font-size:15px; cursor:pointer; font-weight:600; font-family:'IBM Plex Sans',sans-serif; }
-  .settingsRow{ display:flex; flex-direction:column; gap:10px; }
+  .settingsRow{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
 </style>
 </head>
 <body>
@@ -411,7 +420,8 @@
   const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const DOW_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const DEFAULT_PALETTE = ['#6FA3FF','#8B93A6','#9E8BD9','#5FB0A8','#C97768','#D9AE5F','#6BC5C9','#B78BC9'];
+  /* Added 9th color (#E07A93) to nicely fill the width */
+  const DEFAULT_PALETTE = ['#6FA3FF','#8B93A6','#9E8BD9','#5FB0A8','#C97768','#D9AE5F','#6BC5C9','#B78BC9','#E07A93'];
   const STORAGE_KEY = 'planner:v1';
   const HOUR_H = 60; // px per hour
 
@@ -753,7 +763,6 @@
         sw.style.background = c;
         sw.style.position = 'relative';
 
-        // Invisible input that natively handles the color picking
         const input = document.createElement('input');
         input.type = 'color';
         input.value = c;
@@ -764,13 +773,10 @@
         input.style.opacity = '0';
         input.style.cursor = 'pointer';
         
-        // If it's already selected, clicking it will trigger the input (open color picker)
-        // If not selected, the CSS blocks the input click so the JS below handles the simple selection
         input.style.pointerEvents = isSelected ? 'auto' : 'none';
 
         sw.appendChild(input);
 
-        // Click to just select the swatch
         sw.addEventListener('click', (e)=>{
           if(!isSelected) {
             e.preventDefault();
@@ -778,10 +784,9 @@
           }
         });
 
-        // When the user actually changes a color via picker
         input.addEventListener('change', (e)=>{
           const newColor = e.target.value;
-          DB.palette[i] = newColor; // Save new user choice in place of old color
+          DB.palette[i] = newColor; 
           saveDB();
           select(newColor);
         });
