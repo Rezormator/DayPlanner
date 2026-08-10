@@ -210,35 +210,39 @@
   }
   dialog::backdrop{ background:rgba(0,0,0,.6); }
   
-  /* Make sure settings and bulk modals don't stretch */
-  dialog:not(#eventDialog)[open] {
-    display: block;
-    height: fit-content; 
-  }
-  dialog:not(#eventDialog) .sheet {
-    height: auto;
+  /* iOS Safari fix: use flex and auto height to prevent squashing */
+  dialog[open] {
+    display: flex;
+    flex-direction: column;
+    height: auto; 
   }
   
+  /* Main event modal strictly fills available space */
   #eventDialog[open]{
-    display:flex; flex-direction:column;
     height:calc(100vh - var(--topbar-h));
     height:calc(100dvh - var(--topbar-h));
     max-height:calc(100vh - var(--topbar-h));
     max-height:calc(100dvh - var(--topbar-h));
-    border-radius:16px 16px 0 0;
   }
-  #eventDialog .sheet{
-    flex: 1; /* stretches the form to fill the dialog */
-    height:100%; display:flex; flex-direction:column; box-sizing:border-box;
-    overflow-y:auto;
+  
+  .sheet{ 
+    display: flex;
+    flex-direction: column;
+    padding:18px 18px calc(18px + env(safe-area-inset-bottom)); 
+    max-height:100%; 
+    overflow-y:auto; 
+    box-sizing:border-box; 
   }
+
+  /* Stretch only the event form */
+  #eventDialog .sheet{ flex: 1; }
+  
+  /* Let description take remaining space */
   #eventDialog .sheet > .field:last-of-type{ flex:1; display:flex; flex-direction:column; min-height:0; }
   #eventDialog #evDesc{ flex:1; resize:none; min-height:120px; }
-  #eventDialog .sheetBtns{ flex:none; }
   
-  .sheet{ padding:18px 18px calc(18px + env(safe-area-inset-bottom)); max-height:100%; overflow-y:auto; box-sizing:border-box; }
-  .sheetTitle{ font-weight:600; font-size:18px; margin-bottom:14px; }
-  .field{ margin-bottom:12px; }
+  .sheetTitle{ font-weight:600; font-size:18px; margin-bottom:14px; flex:none; }
+  .field{ margin-bottom:12px; flex:none; }
   .field label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; }
   .field input[type=text], .field input[type=time], .field input[type=date], .field textarea{
     width:100%; border:1px solid var(--line-strong); border-radius:8px; padding:10px 11px;
@@ -250,20 +254,20 @@
   }
   .field input::placeholder, .field textarea::placeholder{ color:var(--ink-faint); }
   .field textarea{ resize:vertical; min-height:44px; font-family:'IBM Plex Sans',sans-serif; }
-  .row2{ display:flex; gap:10px; }
+  .row2{ display:flex; gap:10px; flex:none; }
   .row2 .field{ flex:1; }
-  .timeCol{ display:flex; flex-direction:row; gap:10px; }
+  .timeCol{ display:flex; flex-direction:row; gap:10px; flex:none; }
   .timeCol .field{ flex:1; min-width:0; }
 
   /* Colors auto-spaced across width */
-  .colorRow{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+  .colorRow{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; flex:none; }
   .colorSwatch{
     width:30px; height:30px; border-radius:50%; cursor:pointer; opacity:.5;
     border:2px solid transparent;
   }
   .colorSwatch.sel{ opacity:1; border-color:var(--ink); }
   
-  .dowRow{ display:flex; gap:5px; }
+  .dowRow{ display:flex; gap:5px; flex:none; }
   .dowChip{
     flex:1; text-align:center; padding:9px 0; border-radius:8px; background:var(--bg);
     border:1px solid var(--line); font-size:12px; font-weight:600; cursor:pointer; color:var(--ink-soft);
@@ -274,7 +278,9 @@
     border:1px solid var(--glass-border);
     color:var(--ink);
   }
-  .sheetBtns{ display:flex; gap:10px; margin-top:auto; padding-top:16px; }
+  
+  /* Pushes buttons to the bottom of the dialog */
+  .sheetBtns{ display:flex; gap:10px; margin-top:auto; padding-top:16px; flex:none; }
   .btnMain{
     flex:1; color:var(--ink); border:1px solid var(--glass-border); box-sizing:border-box;
     height:48px; padding:0 13px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; line-height:1;
@@ -285,7 +291,8 @@
   }
   .btnCancel{ background:var(--bg-3); color:var(--ink); border:none; padding:13px 16px; border-radius:10px; font-size:15px; cursor:pointer; font-family:'IBM Plex Sans',sans-serif; }
   .btnDelete{ background:var(--danger-soft); color:var(--danger); border:none; padding:13px 16px; border-radius:10px; font-size:15px; cursor:pointer; font-weight:600; font-family:'IBM Plex Sans',sans-serif; }
-  .settingsRow{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+  
+  .settingsRow{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; flex:none; }
 </style>
 </head>
 <body>
